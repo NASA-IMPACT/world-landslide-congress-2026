@@ -1,0 +1,104 @@
+# TerraTorch config — Prithvi-EO-2.0-300M fine-tuning on Landslide4Sense
+# Binary semantic segmentation (landslide / non-landslide), 128x128 HDF5 patches.
+#
+# Run from the workshop folder with:
+#   terratorch fit --config configs/prithvi_eo_v2_300_landslide4sense.yaml
+# or load it inside the notebooks (Part 1 walks through every block).
+
+seed_everything: 42
+
+# ---------------------------------------------------------------------------
+# Trainer: standard PyTorch Lightning trainer settings
+# ---------------------------------------------------------------------------
+trainer:
+  accelerator: auto            # picks cuda > mps > cpu automatically
+  strategy: auto
+  devices: auto
+  precision: 16-mixed          # mixed precision: ~2x faster on modern GPUs
+  max_epochs: 30               # reduce to 2 for a quick smoke test
+  log_every_n_steps: 10
+  logger:
+    class_path: lightning.pytorch.loggers.CSVLogger   # simple, file-based; easy to plot from
+    init_args:
+      save_dir: outputs/logs
+      name: prithvi_landslide
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: checkpoints
+        filename: prithvi300-landslide-{epoch:02d}
+        monitor: val/mIoU                          # mean IoU on the validation set
+
+        mode: max
+        save_top_k: 1
+        save_last: true
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: epoch
+
+# ---------------------------------------------------------------------------
+# Data: TerraTorch's built-in Landslide4Sense datamodule
+# ---------------------------------------------------------------------------
+data:
+  class_path: terratorch.datamodules.Landslide4SenseNonGeoDataModule
+  init_args:
+    data_root: data/Landslide4sense   # expects images/{train,validation,test} + annotations/...
+    batch_size: 16
+    num_workers: 8
+    # Keep only the 6 bands Prithvi was pretrained on (HLS: Blue, Green, Red,
+    # NIR, SWIR1, SWIR2). Landslide4Sense's broad NIR (Sentinel-2 B8) stands in
+    # for HLS's narrow NIR (B8A) — spectrally close, see Part 1 for discussion.
+    bands:
+      - BLUE
+      - GREEN
+      - RED
+      - NIR_BROAD
+      - SWIR_1
+      - SWIR_2
+    # Light geometric augmentation: landslides have no canonical orientation,
+    # so flips/90-degree rotations are label-preserving and curb overfitting.
+    train_transform:
+      - class_path: albumentations.HorizontalFlip
+        init_args:
+          p: 0.5
+      - class_path: albumentations.VerticalFlip
+        init_args:
+          p: 0.5
+      - class_path: albumentations.RandomRotate90
+        init_args:
+          p: 0.5
+      - class_path: albumentations.pytorch.ToTensorV2
+
+# ---------------------------------------------------------------------------
+# Model: frozen-or-tuned Prithvi ViT encoder + UNet decoder
+# ---------------------------------------------------------------------------
+model:
+  class_path: terratorch.tasks.SemanticSegmentationTask
+  init_args:
+    model_factory: EncoderDecoderFactory
+    model_args:
+      backbone: prithvi_eo_v2_300        # Prithvi-EO-2.0, 300M-parameter ViT
+      backbone_pretrained: true          # load IBM/NASA pretrained HLS weights
+      # Tell the backbone which pretrained band embeddings to use, in the order
+      # the datamodule delivers channels (NIR_NARROW receives the B8 data).
+      backbone_bands: [BLUE, GREEN, RED, NIR_NARROW, SWIR_1, SWIR_2]
+      necks:
+        - name: SelectIndices            # tap 4 transformer layers as a feature pyramid
+          indices: [5, 11, 17, 23]
+        - name: ReshapeTokensToImage     # ViT tokens -> 2D feature maps
+        - name: LearnedInterpolateToPyramidal   # upsample to UNet-style resolutions
+      decoder: UNetDecoder
+      decoder_channels: [512, 256, 128, 64]
+      num_classes: 2
+      head_dropout: 0.1
+    loss: dice                           # robust to the heavy class imbalance (~2% landslide pixels)
+    ignore_index: -1
+    lr: 3.0e-5
+    optimizer: AdamW
+    optimizer_hparams:
+      weight_decay: 0.05
+    scheduler: CosineAnnealingLR
+    scheduler_hparams:
+      T_max: 30                          # keep equal to max_epochs
+    freeze_backbone: false               # set true to train the decoder only (faster, lower IoU)
+    plot_on_val: false

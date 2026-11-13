@@ -1,0 +1,8 @@
+metric,value
+precision (landslide),0.5698
+recall (landslide),0.648
+F1 (landslide),0.6064
+IoU (landslide),0.4351
+IoU (background),0.9839
+mean IoU,0.7095
+pixel accuracy,0.9841

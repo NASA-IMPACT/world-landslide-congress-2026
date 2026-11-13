@@ -1,0 +1,20 @@
+# Verified working set for both workshop notebooks (Python 3.11, CUDA GPU).
+# `pip install -r requirements.txt` in a fresh environment is enough —
+# terratorch pulls in the full geospatial + Lightning stack; the extra pins
+# below just freeze the versions this workshop was executed and verified with.
+terratorch==1.2.11
+torch==2.15.0
+torchvision==0.29.2
+lightning==2.6.6
+torchgeo==0.8.1
+timm==1.0.31
+torchmetrics==1.9.0
+albumentations==2.0.8
+h5py==3.16.0
+numpy==2.4.6
+pandas==3.1.1
+scipy==1.17.1
+matplotlib==3.11.2
+huggingface_hub==2.4.0
+# Notebook execution (not needed on Colab / JupyterHub where Jupyter is preinstalled)
+jupyter
