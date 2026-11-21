@@ -98,6 +98,30 @@ terratorch fit --config configs/prithvi_eo_v2_300_landslide4sense.yaml
 
 ## Acknowledgements
 
-The IBM–NASA Prithvi team (foundation models), the TerraTorch developers
-(fine-tuning toolkit), and the Landslide4Sense creators (Ghorbanzadeh et al.)
-— see the Acknowledgements section at the end of each notebook.
+**Workshop organizers**
+
+- NASA MSFC ODSI — University of Alabama in Huntsville, USA
+
+**Collaborators**
+
+- Amrita University, India
+- Arizona State University, USA
+
+**Supported by**
+
+- IEEE Geoscience and Remote Sensing Society (GRSS) Earth Science Informatics
+  (ESI) Technical Committee
+- IEEE GRSS VEDA — <https://dashboard.veda.grss-ieee.org/>
+
+**Models, data, and software**
+
+- The IBM–NASA Prithvi team for pretraining and openly releasing the
+  [Prithvi-EO-2.0](https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-300M)
+  foundation models.
+- The [TerraTorch](https://github.com/IBM/terratorch) developers for the
+  fine-tuning toolkit used throughout both notebooks.
+- The Landslide4Sense team (Ghorbanzadeh et al.) for creating and releasing the
+  benchmark dataset, and IBM–NASA for the
+  [Hugging Face mirror](https://huggingface.co/datasets/ibm-nasa-geospatial/Landslide4sense).
+- Built with PyTorch, PyTorch Lightning, TorchGeo, torchmetrics, SciPy, and the
+  Hugging Face Hub.
